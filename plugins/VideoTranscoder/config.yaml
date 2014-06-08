@@ -1,0 +1,134 @@
+name: Video Transcoder
+key: videotranscoder
+id: videotranscoder
+version: 0.0.1
+description: <__trans phrase="__PLUGIN_DESCRIPTION__" />
+author_name: Yuichi Takeuchi
+author_link: http://takeyu-web.com/
+doc_link: https://github.com/uzuki05/mt-plugin-VideoTranscoder/blob/master/README.md
+l10n_class: VideoTranscoder::L10N
+
+schema_version: 6
+object_types:
+    videotranscoder_job: VideoTranscoder::Job
+
+config_settings:
+    https_ca_dir:
+        default: /etc/ssl/certs
+
+settings:
+    elastic_transcoder_region:
+        default: ap-northeast-1
+        scope: system
+    s3_region:
+        default: ap-northeast-1
+        scope: system
+    access_key_id:
+        default: 
+        scope: system
+    secret_access_key:
+        default: 
+        scope: system
+
+applications:
+    cms:
+        menus:
+            asset:list_videotranscoder_job:
+                label: Video Transcoding
+                mode: list
+                args:
+                    blog_id: 0
+                    _type: videotranscoder_job
+                order: 500
+                view:
+                    - website
+                    - blog
+                    - system
+        methods:
+            new_transcode_job: $videotranscoder::VideoTranscoder::Plugin::_new_transcode_job
+            save_transcode_job: $videotranscoder::VideoTranscoder::Plugin::_save_transcode_job
+        list_actions:
+            asset:
+                new_transcode_job:
+                    label: Video Transcoding
+                    order: 100
+                    mode: new_transcode_job
+                    args:
+                        dialog: 1
+                    dialog: 1
+
+listing_screens:
+    videotranscoder_job:
+        object_label: VideoTranscoder Job
+        object_label_plural: VideoTranscoder Jobs
+        primary: id
+        default_sort_key: id
+        view:
+            - website
+            - blog
+            - system
+
+list_properties:
+    videotranscoder_job:
+        id:
+            base: __virtual.id
+            order: 1
+            default_sort_order: descend
+        name:
+            label: Name
+            auto: 1
+            order: 100
+            display: default
+        asset_id:
+            label: Asset
+            auto: 1
+            order: 200
+            display: optional
+        ets_job_id:
+            label: Job ID
+            auto: 1
+            order: 300
+            display: default
+        ets_pipeline_id:
+            label: Pipeline
+            auto: 1
+            order: 400
+            display: default
+        ets_preset_id:
+            label: Preset
+            auto: 1
+            order: 500
+            display: default
+        ets_job_status:
+            label: Job Status
+            auto: 1
+            order: 600
+            display: default
+        status:
+            label: Status
+            auto: 1
+            order: 700
+            display: optional
+        created_by:
+            base: __virtual.author_name
+            order: 800
+            label: Created By
+            display: optional
+        created_on:
+            base: __virtual.created_on
+            order: 900
+            display: default
+        modified_on:
+            base: __virtual.modified_on
+            order: 1000
+            display: optional
+
+tasks:
+    lanch_transcoder_jobs:
+        label: Lanch transcoder jobs
+        frequency: 1
+        code: $videotranscoder::VideoTranscoder::Plugin::_do_lanch_transcoder_jobs
+    poll_transcoder_jobs:
+        label: Poll for transcoder jobs
+        frequency: 1
+        code: $videotranscoder::VideoTranscoder::Plugin::_do_poll_transcoder_jobs
