@@ -240,8 +240,14 @@ sub _raw_get {
         my $pair = sprintf( '%s=%s', uri_escape(encode('utf-8', $key)), uri_escape(encode('utf-8', $val)) );
     }
     my $query = join '&', @pairs;
-    my $url = $self->_build_resource_url( $resource, $query );
     
+    my @pathnames;
+    foreach my $pathname ( split( '/', $resource ) ) {
+        push @pathnames, uri_escape(encode('utf-8', $pathname));
+    }
+    my $encoded_resource = join( '/', @pathnames ) || '/';
+    my $url = $self->_build_resource_url( $encoded_resource, $query );
+
     my $ua = LWP::UserAgent->new;
 
     my $req = HTTP::Request->new('GET', $url, $header);
@@ -291,7 +297,13 @@ sub head {
         my $pair = sprintf( '%s=%s', uri_escape(encode('utf-8', $key)), uri_escape(encode('utf-8', $val)) );
     }
     my $query = join '&', @pairs;
-    my $url = $self->_build_resource_url( $resource, $query );
+    
+    my @pathnames;
+    foreach my $pathname ( split( '/', $resource ) ) {
+        push @pathnames, uri_escape(encode('utf-8', $pathname));
+    }
+    my $encoded_resource = join( '/', @pathnames ) || '/';
+    my $url = $self->_build_resource_url( $encoded_resource, $query );
     
     my $ua = LWP::UserAgent->new;
     my $req = HTTP::Request->new('HEAD', $url, $header);
@@ -321,7 +333,13 @@ sub head {
 sub post {
     my $self = shift;
     my ( $resource, $body, $header ) = @_;
-    my $url = $self->_build_resource_url( $resource );
+    
+    my @pathnames;
+    foreach my $pathname ( split( '/', $resource ) ) {
+        push @pathnames, uri_escape(encode('utf-8', $pathname));
+    }
+    my $encoded_resource = join( '/', @pathnames ) || '/';
+    my $url = $self->_build_resource_url( $encoded_resource );
     
     my $ua = LWP::UserAgent->new;
     my $req = HTTP::Request->new( 'POST', $url, $header );
@@ -354,7 +372,13 @@ sub post {
 sub put {
     my $self = shift;
     my ( $resource, $content, $header ) = @_;
-    my $url = $self->_build_resource_url( $resource );
+    
+    my @pathnames;
+    foreach my $pathname ( split( '/', $resource ) ) {
+        push @pathnames, uri_escape(encode('utf-8', $pathname));
+    }
+    my $encoded_resource = join( '/', @pathnames ) || '/';
+    my $url = $self->_build_resource_url( $encoded_resource );
     
     my $ua = LWP::UserAgent->new;
     my $req = HTTP::Request->new('PUT', $url, $header);

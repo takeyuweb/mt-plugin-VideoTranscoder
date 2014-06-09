@@ -99,10 +99,14 @@ sub _job {
     );
 }
 
-sub has_thumbnail {
+sub _thumbnail_format {
     my $job = shift;
     my $preset = $job->_preset;
-    $preset && $preset->{ Thumbnail } ? 1 : 0;
+    if ( $preset && $preset->{ Thumbnails } ) {
+        return $preset->{ Thumbnails }->{ Format };
+    } else {
+        return;
+    }
 }
 
 sub is_video {
@@ -222,6 +226,7 @@ sub _create_children {
     my $encoded = VideoTranscoder::AWS::S3->new( bucket_name => $job->_output_bucket );
     my $ets_job = $job->_job;
     my $container = $job->_preset()->{ Container };
+    my $child_asset;
     if ( $container eq 'ts' &&
             $ets_job->{ Playlists } &&
             $ets_job->{ Playlists }->[0] &&
@@ -229,7 +234,7 @@ sub _create_children {
         my $playlist_key = File::Spec->catfile( $ets_job->{ OutputKeyPrefix } || '',
                                                 $ets_job->{ Output }->{ Key } . '.m3u8' );
         my ( $playlist, $playlist_mime_type ) = $encoded->get_object( $playlist_key ) or die $encoded->errstr;
-        my $playlist_asset = $job->_save_child( sprintf( '%s.%s', $ets_job->{ Output }->{ Key }, 'm3u8' ), $playlist_mime_type, $playlist );
+        $child_asset = $job->_save_child( sprintf( '%s.%s', $ets_job->{ Output }->{ Key }, 'm3u8' ), $playlist_mime_type, $playlist );
         my @playlist_lines = split "\n", $playlist;
         my @ts_assets = ();
         foreach my $line ( @playlist_lines ) {
@@ -239,7 +244,7 @@ sub _create_children {
             my $ts_key = File::Spec->catfile( $ets_job->{ OutputKeyPrefix } || '',
                                               $ts_name );
             my ( $ts, $ts_mime_type ) = $encoded->get_object( $ts_key ) or die $encoded->errstr;
-            my $ts_asset = $job->_save_child( $ts_name, $ts_mime_type, $ts, $playlist_asset );
+            my $ts_asset = $job->_save_child( $ts_name, $ts_mime_type, $ts, $child_asset );
         }
     } else {
         my ( $data, $output_mime_type ) = $encoded->get_object( $job->output_key );
@@ -253,10 +258,25 @@ sub _create_children {
             return 0;
         }
         my $mime_type = $output_mime_type;
-        $job->_save_child( sprintf( '%d.%s', $job->id, $container ),
-                           $mime_type,
-                           $data );
+        $child_asset = $job->_save_child( sprintf( '%d.%s', $job->id, $container ),
+                                          $mime_type,
+                                          $data );
     }
+    
+    if ( my $thumbnail_format = $job->_thumbnail_format ) {
+        require File::Basename;
+        my ( $child_basename, $child_dirname, $child_ext ) =
+            File::Basename::fileparse( $job->output_key, qr/\..*$/ );
+        my $thumbnail_key = File::Spec->catfile( $child_dirname,
+                                                 $child_basename . '_[00001].' . $thumbnail_format);
+        my ( $thumbnail, $thumbnail_mime_type ) = $encoded->get_object( $thumbnail_key );
+        $job->_save_child( sprintf( '%d.%s', $job->id, $thumbnail_format ),
+                           $thumbnail_mime_type,
+                           $thumbnail,
+                           $child_asset );
+    }
+    
+    return $child_asset;
 }
 
 sub _save_child {
@@ -266,8 +286,7 @@ sub _save_child {
     require File::Basename;
     my ( $basename, $dirname, $ext ) = File::Basename::fileparse( $job->asset->file_path, qr/\..*$/ );
     my $output_dir = File::Spec->catfile( $dirname, $basename, $job->id );
-    my @output_parts = File::Basename::fileparse( $output_name, qr/\..*$/ );
-    my $output_ext = $output_parts[2];
+    my $output_ext = (  File::Basename::fileparse( $output_name, qr/\..*$/ ) )[2];
     
     # 書き込む際日本語ファイル名で書き込めないので内部文字列からUTF-8に
     require Encode;
@@ -290,6 +309,8 @@ sub _save_child {
         $asset_pkg = MT->model( 'video' );
     } elsif ( $mime_type =~ /^audio\// ) {
         $asset_pkg = MT->model( 'audio' );
+    } elsif ( $mime_type =~ /^image\// ) {
+        $asset_pkg = MT->model( 'image' );
     } else {
         $asset_pkg = MT->model( 'asset' );
     }
