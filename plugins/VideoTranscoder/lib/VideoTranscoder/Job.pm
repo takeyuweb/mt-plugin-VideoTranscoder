@@ -85,6 +85,24 @@ sub _preset {
     );
 }
 
+sub has_thumbnail {
+    my $job = shift;
+    my $preset = $job->_preset;
+    $preset && $preset->{ Thumbnail } ? 1 : 0;
+}
+
+sub is_video {
+    my $job = shift;
+    my $preset = $job->_preset;
+    $preset && $preset->{ Video } ? 1 : 0;
+}
+
+sub is_audio {
+    my $job = shift;
+    my $preset = $job->_preset;
+    $preset && $preset->{ Audio } ? 1 : 0;
+}
+
 sub _input_bucket {
     my $job = shift;
     $job->_pipeline ?
@@ -164,9 +182,6 @@ sub _create_ets_job {
 sub _check_ets_job {
     my $job = shift;
     
-    #require VideoTranscoder::AWS;
-    #my $encoded = VideoTranscoder::AWS::S3->new( bucket_name => 'transcoder-test.takeyu-web.com' );
-    #$encoded->get_object( 'encoded/sample-00001.png' );
     my $ets = VideoTranscoder::AWS::ElasticTranscoder->new;
     my $ets_job = $ets->read_job( $job->ets_job_id );
     unless ( $ets_job ) {
@@ -225,7 +240,14 @@ sub _create_children {
     $output_path = Encode::decode_utf8( $output_path );
     
     require MT::Util;
-    my $asset = MT->model( 'video' )->new;
+    my $asset;
+    if ( $job->is_video ) {
+        $asset = MT->model( 'video' )->new;
+        $asset->mime_type( 'video/' . $container );
+    } else {
+        $asset = MT->model( 'audio' )->new;
+        $asset->mime_type( 'audio/' . $container );
+    }
     $asset->blog_id( $job->asset->blog_id );
     $asset->label( $job->asset->label );
     
@@ -239,7 +261,6 @@ sub _create_children {
     $asset->description( $job->asset->description );
     $asset->file_name( $output_name );
     $asset->file_ext( $output_ext );
-    $asset->mime_type( 'video/' . $container );
     $asset->parent( $job->asset_id );
     $asset->created_by( $job->created_by );
     require MT::Util;

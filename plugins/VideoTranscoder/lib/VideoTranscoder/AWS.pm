@@ -137,7 +137,7 @@ sub _hashed_canonical {
     }
     
     my $canonical = join "\n", @lines;
-MT->log( $canonical );
+    
     return sha256_hex( $canonical );
 }
 
@@ -156,7 +156,7 @@ sub _string_to_sign {
     push @lines, sprintf( "%s/%s/%s/aws4_request", $date, $self->{ region }, $self->{ service } );
     push @lines, $hashed_canonical;
     my $string_to_sign = join "\n", @lines;
-MT->log( $string_to_sign );
+
     return $string_to_sign;
 }
 
@@ -165,7 +165,7 @@ sub authorize {
     my ( $req ) = @_;
     my $uri = $req->uri;
     my $header = $req->headers();
-MT->log(Data::Dumper->Dump([ $header ]));
+
     my $string_to_sign = $self->_string_to_sign( $req );
     my $date = $self->_request_date( $req );
 
@@ -333,7 +333,7 @@ sub post {
                                      $self->config->{ region },
                                      $self->service );
     $req = $sig->sign( $req );
-MT->log( $req->content );
+
     my $response = $ua->request( $req );
     if ( $response->is_success ) {
         require MT::Util;
@@ -470,6 +470,9 @@ sub read_preset {
 sub create_job {
     my $self = shift;
     my ( $input_key, $output_key, $pipeline_id, $preset_id ) = @_;
+    
+    my $preset = $self->read_preset( $preset_id );
+    
     require File::Basename;
     my ( $basename, $dirname, $ext ) = File::Basename::fileparse( $output_key, qr/\..*$/ );
     my $post_data = {
@@ -480,13 +483,12 @@ sub create_job {
         Outputs => [
             {
                 Key => $basename . $ext,
-                ThumbnailPattern => $basename . '_{count}',
+                ( $preset->{ Thumbnails } ? ( ThumbnailPattern => $basename . '_{count}' ) : () ),
                 PresetId => $preset_id,
                 Composition => [
                     {
                         TimeSpan    => {
                             StartTime   => '00:00:00.000',
-                            Duration    => '00:00:02.000',
                         }
                     }
                 ]
