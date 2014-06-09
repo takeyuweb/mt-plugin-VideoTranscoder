@@ -85,6 +85,20 @@ sub _preset {
     );
 }
 
+sub _job {
+    my $job = shift;
+    $job->cache_property(
+        'job',
+        sub {
+            require VideoTranscoder::AWS;
+            my $ets = VideoTranscoder::AWS::ElasticTranscoder->new;
+            my $ets_job = $ets->read_job( $job->ets_job_id );
+            return $ets_job;
+        },
+        @_
+    );
+}
+
 sub has_thumbnail {
     my $job = shift;
     my $preset = $job->_preset;
@@ -165,7 +179,7 @@ sub _create_ets_job {
         my $ets = VideoTranscoder::AWS::ElasticTranscoder->new;
         my $ets_job = $ets->create_job( $job->input_key, $job->output_key, $job->ets_pipeline_id, $job->ets_preset_id );
         unless ( $ets_job ) {
-            die 'create ElasticTranscoder job failed.';
+            die 'create ElasticTranscoder job failed.:' . $ets->errstr;
         }
         $job->ets_job_id( $ets_job->{ Id } );
         $job->ets_job_status( $ets_job->{ Status } );
@@ -182,8 +196,7 @@ sub _create_ets_job {
 sub _check_ets_job {
     my $job = shift;
     
-    my $ets = VideoTranscoder::AWS::ElasticTranscoder->new;
-    my $ets_job = $ets->read_job( $job->ets_job_id );
+    my $ets_job = $job->_job;
     unless ( $ets_job ) {
         die 'create ElasticTranscoder job failed.';
     }
@@ -207,23 +220,54 @@ sub _create_children {
     my $job = shift;
     require VideoTranscoder::AWS;
     my $encoded = VideoTranscoder::AWS::S3->new( bucket_name => $job->_output_bucket );
-    my $data = $encoded->get_object( $job->output_key );
-    unless ( $data ) {
-        require MT::Log;
-        my $log = MT::Log->new;
-        $log->message( $encoded->errstr );
-        $log->level( MT::Log::ERROR() );
-        $log->save
-            or die $log->errstr;
-        return 0;
+    my $ets_job = $job->_job;
+    my $container = $job->_preset()->{ Container };
+    if ( $container eq 'ts' &&
+            $ets_job->{ Playlists } &&
+            $ets_job->{ Playlists }->[0] &&
+            $ets_job->{ Playlists }->[0]->{ Name } ) {
+        my $playlist_key = File::Spec->catfile( $ets_job->{ OutputKeyPrefix } || '',
+                                                $ets_job->{ Output }->{ Key } . '.m3u8' );
+        my ( $playlist, $playlist_mime_type ) = $encoded->get_object( $playlist_key ) or die $encoded->errstr;
+        my $playlist_asset = $job->_save_child( sprintf( '%s.%s', $ets_job->{ Output }->{ Key }, 'm3u8' ), $playlist_mime_type, $playlist );
+        my @playlist_lines = split "\n", $playlist;
+        my @ts_assets = ();
+        foreach my $line ( @playlist_lines ) {
+            next if $line =~ /^#/;
+            next unless $line =~ /\.ts$/;
+            my $ts_name = $line;
+            my $ts_key = File::Spec->catfile( $ets_job->{ OutputKeyPrefix } || '',
+                                              $ts_name );
+            my ( $ts, $ts_mime_type ) = $encoded->get_object( $ts_key ) or die $encoded->errstr;
+            my $ts_asset = $job->_save_child( $ts_name, $ts_mime_type, $ts, $playlist_asset );
+        }
+    } else {
+        my ( $data, $output_mime_type ) = $encoded->get_object( $job->output_key );
+        unless ( $data ) {
+            require MT::Log;
+            my $log = MT::Log->new;
+            $log->message( $encoded->errstr );
+            $log->level( MT::Log::ERROR() );
+            $log->save
+                or die $log->errstr;
+            return 0;
+        }
+        my $mime_type = $output_mime_type;
+        $job->_save_child( sprintf( '%d.%s', $job->id, $container ),
+                           $mime_type,
+                           $data );
     }
+}
+
+sub _save_child {
+    my $job = shift;
+    my ( $output_name, $mime_type, $data, $parent ) = @_;
     
     require File::Basename;
     my ( $basename, $dirname, $ext ) = File::Basename::fileparse( $job->asset->file_path, qr/\..*$/ );
-    my $output_dir = File::Spec->catfile( $dirname, $basename );
-    my $container = $job->_preset()->{ Container };
-    my $output_ext = sprintf( '.%s', $container );
-    my $output_name = sprintf( '%d%s', $job->id, $output_ext );
+    my $output_dir = File::Spec->catfile( $dirname, $basename, $job->id );
+    my @output_parts = File::Basename::fileparse( $output_name, qr/\..*$/ );
+    my $output_ext = $output_parts[2];
     
     # 書き込む際日本語ファイル名で書き込めないので内部文字列からUTF-8に
     require Encode;
@@ -240,16 +284,19 @@ sub _create_children {
     $output_path = Encode::decode_utf8( $output_path );
     
     require MT::Util;
-    my $asset;
-    if ( $job->is_video ) {
-        $asset = MT->model( 'video' )->new;
-        $asset->mime_type( 'video/' . $container );
+    #my $asset_pkg = MT->model( 'asset' )->handler_for_file( $output_name );
+    my $asset_pkg;
+    if ( $mime_type =~ /^video\// ) {
+        $asset_pkg = MT->model( 'video' );
+    } elsif ( $mime_type =~ /^audio\// ) {
+        $asset_pkg = MT->model( 'audio' );
     } else {
-        $asset = MT->model( 'audio' )->new;
-        $asset->mime_type( 'audio/' . $container );
+        $asset_pkg = MT->model( 'asset' );
     }
+    my $asset = $asset_pkg->new();
+    $asset->mime_type( $mime_type );
     $asset->blog_id( $job->asset->blog_id );
-    $asset->label( $job->asset->label );
+    $asset->label( sprintf( '%s (%s)', $output_name, $job->asset->label ) );
     
     my $site_path = $job->blog->site_path;
     my $rel_path = File::Spec->abs2rel($output_path, $site_path );
@@ -261,11 +308,12 @@ sub _create_children {
     $asset->description( $job->asset->description );
     $asset->file_name( $output_name );
     $asset->file_ext( $output_ext );
-    $asset->parent( $job->asset_id );
+    $asset->parent( $parent ? $parent->id : $job->asset_id );
     $asset->created_by( $job->created_by );
     require MT::Util;
     $asset->created_on( MT::Util::epoch2ts( $job->blog, time ) );
     $asset->save or die $asset->errstr;
+    return $asset;
 }
 
 1;

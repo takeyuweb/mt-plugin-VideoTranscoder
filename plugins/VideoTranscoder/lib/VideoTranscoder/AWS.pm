@@ -255,7 +255,7 @@ sub _raw_get {
  
     my $response = $ua->request( $req );
     if ( $response->is_success ) {
-        return $response->content;
+        return $response;
     } else {
         return $self->error( $response->content );
     }
@@ -263,9 +263,9 @@ sub _raw_get {
 
 sub get {
     my $self = shift;
-    if ( my $content = $self->_raw_get( @_ ) ) {
+    if ( my $response = $self->_raw_get( @_ ) ) {
         require MT::Util;
-        return MT::Util::from_json( decode_utf8( $content ) );
+        return MT::Util::from_json( decode_utf8( $response->content ) );
     } else {
         my $error_response = $self->errstr;
         my $decoded_error_response = decode_utf8( $error_response );
@@ -483,7 +483,7 @@ sub create_job {
         Outputs => [
             {
                 Key => $basename . $ext,
-                ( $preset->{ Thumbnails } ? ( ThumbnailPattern => $basename . '_{count}' ) : () ),
+                ( $preset->{ Thumbnails } ? ( ThumbnailPattern => $basename . '_[{count}]' ) : () ),
                 PresetId => $preset_id,
                 Composition => [
                     {
@@ -491,11 +491,24 @@ sub create_job {
                             StartTime   => '00:00:00.000',
                         }
                     }
-                ]
+                ],
             }
         ],
         PipelineId  => $pipeline_id
     };
+    if ( $preset->{ Container } eq 'ts' ) {
+        $post_data->{ Outputs }->[0]->{ Key } = $basename;
+        $post_data->{ Outputs }->[0]->{ SegmentDuration } = '10';
+        $post_data->{ Playlists } = [
+            {
+                Format => 'HLSv3',
+                Name => $basename . '_master',
+                OutputKeys => [
+                    $basename
+                ],
+            }
+        ];
+    }
     require MT::Util;
     my $json = MT::Util::to_json( $post_data );
     my $headers = [
@@ -603,8 +616,9 @@ sub put_object {
 sub get_object {
     my $self = shift;
     my ( $object_name ) = @_;
-    if ( my $binary = $self->_raw_get( $object_name, {}, [ 'x-amz-content-sha256' => 'SHA256' ] ) ) {
-        return $binary;
+    my $response = $self->_raw_get( $object_name, {}, [ 'x-amz-content-sha256' => 'SHA256' ] );
+    if ( $response ) {
+        return $response->content, $response->headers->header( 'Content-Type' );
     } else {
         return;
     }
