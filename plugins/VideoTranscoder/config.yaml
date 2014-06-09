@@ -48,6 +48,7 @@ applications:
         methods:
             new_transcode_job: $videotranscoder::VideoTranscoder::Plugin::_new_transcode_job
             save_transcode_job: $videotranscoder::VideoTranscoder::Plugin::_save_transcode_job
+            do_transcode_job: $videotranscoder::VideoTranscoder::Plugin::_do_transcode_job
         list_actions:
             asset:
                 new_transcode_job:
@@ -123,6 +124,13 @@ list_properties:
             base: __virtual.modified_on
             order: 1000
             display: optional
+
+list_actions:
+    videotranscoder_job:
+        run:
+            label: Run
+            mode: do_transcode_job
+            button: 1
 
 tasks:
     lanch_transcoder_jobs:

@@ -59,6 +59,40 @@ sub _save_transcode_job {
     );
 }
 
+sub _do_transcode_job {
+    my $app = shift;
+    my $blog = $app->blog;
+    my $blog_id = $blog->id;
+    $app->validate_magic() or
+        return $app->errtrans( 'Invalid request.' );
+    if ( $app->param( 'all_selected' ) ) {
+        $app->setup_filtered_ids;
+    }
+    my @ids = $app->param( 'id' );
+    my $did = 0;
+    my $skipped = 0;
+    foreach my $id ( @ids ) {
+        my $job = MT->model( 'videotranscoder_job' )->load( $id ) or next;
+        if ( $job->status == 0 || $job->status == 1 ) {
+            $job->run();
+            $did++;
+        } else {
+            $skipped++;
+        }
+    }
+    $app->redirect(
+        $app->uri(
+            mode => 'list',
+            args => {
+                blog_id => $blog_id,
+                skipped => $skipped,
+                did     => $did,
+                _type   => 'videotranscoder_job',
+            }
+        )
+    );
+}
+
 sub _do_lanch_transcoder_jobs {
     my $job_iter =MT->model( 'videotranscoder_job' )->load_iter( { status => 0 } );
     while ( my $job = $job_iter->() ) {

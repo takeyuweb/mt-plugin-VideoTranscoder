@@ -1,0 +1,30 @@
+<mt:setvarblock name="system_msg" append="1">
+<__trans_section component="videotranscoder">
+<div id="msg-container">
+    <mt:if name="request.added">
+        <mtapp:statusmsg
+            id="added"
+            class="success"
+            rebuild="">
+            <__trans phrase="[_1] Jobs added." params="<mt:getvar name='request.added'>">
+        </mtapp:statusmsg>
+    </mt:if>
+    <mt:if name="request.did">
+        <mtapp:statusmsg
+            id="did"
+            class="success"
+            rebuild="">
+            <__trans phrase="[_1] Jobs did." params="<mt:getvar name='request.did'>">
+        </mtapp:statusmsg>
+    </mt:if>
+    <mt:if name="request.skipped" gt="0">
+        <mtapp:statusmsg
+            id="skipped"
+            class="error"
+            rebuild="">
+            <__trans phrase="[_1] Jobs skipped." params="<mt:getvar name='request.skipped'>">
+        </mtapp:statusmsg>
+    </mt:if>
+</div>
+</__trans_section>
+</mt:setvarblock>
