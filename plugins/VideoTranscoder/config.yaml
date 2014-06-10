@@ -128,16 +128,23 @@ list_properties:
 list_actions:
     videotranscoder_job:
         run:
+            order: 1
             label: Run
             mode: do_transcode_job
+            button: 1
+        delete:
+            order: 100
+            label: Delete
+            mode: delete
+            js_message: delete
             button: 1
 
 tasks:
     lanch_transcoder_jobs:
         label: Lanch transcoder jobs
-        frequency: 1
+        frequency: 300
         code: $videotranscoder::VideoTranscoder::Plugin::_do_lanch_transcoder_jobs
     poll_transcoder_jobs:
         label: Poll for transcoder jobs
-        frequency: 1
+        frequency: 300
         code: $videotranscoder::VideoTranscoder::Plugin::_do_poll_transcoder_jobs
