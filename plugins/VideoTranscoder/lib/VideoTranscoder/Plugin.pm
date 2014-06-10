@@ -96,14 +96,34 @@ sub _do_transcode_job {
 sub _do_lanch_transcoder_jobs {
     my $job_iter =MT->model( 'videotranscoder_job' )->load_iter( { status => 0 } );
     while ( my $job = $job_iter->() ) {
-        $job->run();
+        eval {
+            $job->run();
+        };
+        if ( my $errstr = $@ ) {
+            require MT::Log;
+            my $log = MT::Log->new;
+            $log->message( $errstr );
+            $log->level( MT::Log::ERROR() );
+            $log->save
+                or die $log->errstr;
+        }
     }
 }
 
 sub _do_poll_transcoder_jobs {
     my $job_iter =MT->model( 'videotranscoder_job' )->load_iter( { status => 1 } );
     while ( my $job = $job_iter->() ) {
-        $job->run();
+        eval {
+            $job->run();
+        };
+        if ( my $errstr = $@ ) {
+            require MT::Log;
+            my $log = MT::Log->new;
+            $log->message( $errstr );
+            $log->level( MT::Log::ERROR() );
+            $log->save
+                or die $log->errstr;
+        }
     }
 }
 

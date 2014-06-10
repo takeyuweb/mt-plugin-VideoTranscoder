@@ -14,7 +14,7 @@ object_types:
 
 config_settings:
     https_ca_dir:
-        default: /etc/ssl/certs
+        default: 
 
 system_config_template: system_config.tmpl
 settings:

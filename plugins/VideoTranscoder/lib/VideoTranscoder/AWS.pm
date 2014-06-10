@@ -68,7 +68,6 @@ sub _request_date {
 package VideoTranscoder::AWS::Signature::V4;
 use base qw( VideoTranscoder::AWS::Signature );
 use Digest::SHA qw(hmac_sha256_base64 sha256_hex hmac_sha256_hex hmac_sha256);
-use Net::SSL;
 use HTTP::Date;
 use URI::Escape;
 use Encode;
@@ -192,9 +191,14 @@ use MT;
 use Encode;
 use URI::Escape;
 use LWP::UserAgent;
+use IO::Socket::SSL;
+use FindBin;
+use lib "$FindBin::Bin/../../extlib";
+use Mozilla::CA;
 use base qw( MT::ErrorHandler );
 use JSON;
 use Digest::SHA qw( sha256_hex );
+
 
 if ( MT->config->https_ca_dir ) {
     $ENV{HTTPS_CA_DIR} = MT->config->https_ca_dir;
