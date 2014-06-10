@@ -170,7 +170,6 @@ sub _create_ets_job {
     if ( $job->_input_bucket && $job->input_key ) {
         require VideoTranscoder::AWS;
         my $upload = VideoTranscoder::AWS::S3->new( bucket_name => $job->_input_bucket );
-        
         unless ( $upload->head_object( $job->input_key ) ) {
             require MT::FileMgr;
             my $fmgr = $job->blog->file_mgr || MT::FileMgr->new( 'Local' );
@@ -191,6 +190,10 @@ sub _create_ets_job {
         my $json = MT::Util::to_json( $ets_job );
         $job->ets_job_body( $json );
         $job->status( 1 );
+        my @ts = MT::Util::offset_time_list( time, $job->blog_id );
+        my $ts = sprintf '%04d%02d%02d%02d%02d%02d',
+            $ts[5] + 1900, $ts[4] + 1, @ts[ 3, 2, 1, 0 ];
+        $job->modified_on( $ts );
         $job->save or die $job->errstr;
         return 1;
     }
@@ -216,6 +219,10 @@ sub _check_ets_job {
     } elsif ( $ets_job->{ Status } eq 'Error' ) {
         $job->status( 4 );
     }
+    my @ts = MT::Util::offset_time_list( time, $job->blog_id );
+    my $ts = sprintf '%04d%02d%02d%02d%02d%02d',
+        $ts[5] + 1900, $ts[4] + 1, @ts[ 3, 2, 1, 0 ];
+    $job->modified_on( $ts );
     $job->save or die $job->errstr;
     return 1;
 }
