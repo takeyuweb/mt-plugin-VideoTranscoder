@@ -11,7 +11,9 @@ __PACKAGE__->install_properties(
             name            => 'string(255)',
             asset_id        => 'integer not null',
             ets_pipeline_id => 'string(255) not null',
+            ets_pipeline_name => 'string(255) not null',
             ets_preset_id   => 'string(255) not null',
+            ets_preset_name => 'string(255) not null',
             ets_job_id      => 'string(255)',
             ets_job_status  => 'string(255)',
             ets_job_body    => 'text',
@@ -29,6 +31,17 @@ __PACKAGE__->install_properties(
         primary_key => 'id',
     }
 );
+
+sub save {
+    my $job = shift;
+    unless ( undef ( my $ets_pipeline_name = $job->ets_pipeline_name ) ) {
+        $job->ets_pipeline_name( $job->_pipeline()->{ Name } );
+    }
+    unless ( undef ( my $ets_preset_name = $job->ets_preset_name ) ) {
+        $job->ets_preset_name( $job->_preset()->{ Name } );
+    }
+    $job->SUPER::save( @_ );
+}
 
 sub blog {
     my $job = shift;
