@@ -76,21 +76,20 @@ list_properties:
             base: __virtual.id
             order: 1
             default_sort_order: descend
+        ets_job_id:
+            label: Job ID
+            auto: 1
+            order: 10
+            display: force
         name:
             label: Name
             auto: 1
             order: 100
             display: default
         asset_id:
+            base: __virtual.hidden
             label: Asset
-            auto: 1
             order: 200
-            display: optional
-        ets_job_id:
-            label: Job ID
-            auto: 1
-            order: 300
-            display: default
         ets_pipeline_name:
             label: Pipeline
             auto: 1
@@ -127,11 +126,11 @@ list_properties:
         created_on:
             base: __virtual.created_on
             order: 900
-            display: default
+            display: optional
         modified_on:
             base: __virtual.modified_on
             order: 1000
-            display: optional
+            display: default
 
 list_actions:
     videotranscoder_job:
