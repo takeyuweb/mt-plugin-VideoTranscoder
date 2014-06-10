@@ -5,7 +5,7 @@ version: 0.0.1
 description: <__trans phrase="__PLUGIN_DESCRIPTION__" />
 author_name: Yuichi Takeuchi
 author_link: http://takeyu-web.com/
-doc_link: https://github.com/uzuki05/mt-plugin-VideoTranscoder/blob/master/README.md
+doc_link: http://blog.takeyu-web.com/mt/2014/06/-videotranscoder-for-movabletype.html
 l10n_class: VideoTranscoder::L10N
 
 schema_version: 8

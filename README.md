@@ -22,7 +22,7 @@ AWSのコマンドラインツールではなくAPIを直接利用しており�
 
 ## 動作環境
 
-- MovableType 6.0 / 5.2(未確認)
+- MovableType 6.0
 - Movable Type クラウド版
 
 
