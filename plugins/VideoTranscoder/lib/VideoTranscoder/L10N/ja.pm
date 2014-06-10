@@ -15,6 +15,7 @@ use vars qw(%Lexicon);
     'Pipeline'                  => 'パイプライン',
     'Preset'                    => 'プリセット',
     'Job Status'                => '状態',
+    'Job Status Detail'         => 'エラー詳細',
     'Run'                       => '実行',
     '[_1] Jobs added.'          => '[_1]件のジョブを登録しました。',
     '[_1] Jobs did.'            => '[_1]件実行しました。',

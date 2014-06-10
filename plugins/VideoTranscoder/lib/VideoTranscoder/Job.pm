@@ -15,7 +15,8 @@ __PACKAGE__->install_properties(
             ets_preset_id   => 'string(255) not null',
             ets_preset_name => 'string(255) not null',
             ets_job_id      => 'string(255)',
-            ets_job_status  => 'string(255)',
+            ets_job_status  => 'string(20)',
+            ets_job_status_detail => 'string(255)',
             ets_job_body    => 'text',
         },
         indexes     => {
@@ -199,6 +200,7 @@ sub _create_ets_job {
         }
         $job->ets_job_id( $ets_job->{ Id } );
         $job->ets_job_status( $ets_job->{ Status } );
+        $job->ets_job_status_detail( $ets_job->{ Output }->{ StatusDetail } );
         require MT::Util;
         my $json = MT::Util::to_json( $ets_job );
         $job->ets_job_body( $json );
@@ -221,6 +223,7 @@ sub _check_ets_job {
         die 'create ElasticTranscoder job failed.';
     }
     $job->ets_job_status( $ets_job->{ Status } );
+    $job->ets_job_status_detail( $ets_job->{ Output }->{ StatusDetail } );
     require MT::Util;
     my $json = MT::Util::to_json( $ets_job );
     $job->ets_job_body( $json );

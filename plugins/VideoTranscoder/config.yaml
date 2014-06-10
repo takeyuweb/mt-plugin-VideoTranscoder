@@ -8,7 +8,7 @@ author_link: http://takeyu-web.com/
 doc_link: https://github.com/uzuki05/mt-plugin-VideoTranscoder/blob/master/README.md
 l10n_class: VideoTranscoder::L10N
 
-schema_version: 7
+schema_version: 8
 object_types:
     videotranscoder_job: VideoTranscoder::Job
 
@@ -112,6 +112,11 @@ list_properties:
             label: Job Status
             auto: 1
             order: 600
+            display: default
+        ets_job_status_detail:
+            label: Job Status Detail
+            auto: 1
+            order: 601
             display: default
         status:
             label: Status
